@@ -10,8 +10,8 @@ const {checkUsername, checkEmail, checkPassword} = require("./utils");
 app.use(bodyParser.json({limit: '100mb'}));
 app.use(bodyParser.urlencoded({limit: '100mb', extended: true}));
 
-// Login Endpoint
-app.post('/api/login', (req, res) => {
+// Customer Login Endpoint
+app.post('/api/customer/login', (req, res) => {
     const {username, password} = req.body;
     if (!username || !password) {
         res.status(400).send("Bad Request");
@@ -30,8 +30,8 @@ app.post('/api/login', (req, res) => {
         });
 });
 
-// Register Endpoint
-app.post('/api/register', (req, res) => {
+// Customer Register Endpoint
+app.post('/api/customer/register', (req, res) => {
     const {username, password, email} = req.body;
     if (!username || !password || !email) {
         return res.status(400).send("Bad Request");
@@ -59,6 +59,26 @@ app.post('/api/register', (req, res) => {
         }
     )
 
+});
+
+// Store Owner Login Endpoint
+app.post('/api/owner/login', (req, res) => {
+    const {username, password} = req.body;
+    if (!username || !password) {
+        res.status(400).send("Bad Request");
+        return;
+    }
+    const query = `SELECT * FROM owner WHERE username = '${username}' AND password = '${password}'`;
+    db.one(query)
+        .then(user => {
+            const token = generateJwt({id: user.id, username: user.username});
+            res.json({
+                token: token, message: "Login Successful", success: true, code: 200
+            });
+        }).catch(err => {
+            res.status(200).json({message: 'Invalid username or password', success: false, code: 200});
+        }
+    );
 });
 
 // Get Categories & Subcategories Endpoint
