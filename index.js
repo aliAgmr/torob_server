@@ -79,7 +79,13 @@ app.post('/api/owner/login', (req, res) => {
 
 // Get Products Endpoint
 app.get('/api/products', (req, res) => {
-    const query = `SELECT name, description, category_id, processor, ram, battery, dimensions, product_id, price FROM product LEFT JOIN store_product sp ON product.id = sp.product_id ORDER BY price`;
+    const category_id = req.query.category_id;
+    let query = `SELECT name, description, category_id, processor, ram, battery, dimensions, product_id, price FROM product LEFT JOIN store_product sp ON product.id = sp.product_id`;
+    if (category_id) {
+        query += ` WHERE category_id = ${category_id} ORDER BY price`;
+    }else {
+        query += ` ORDER BY price`;
+    }
     db.any(query)
         .then(products => {
             let filteredProducts = [];
