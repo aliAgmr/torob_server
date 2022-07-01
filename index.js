@@ -1,7 +1,6 @@
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
-const path = require('path');
 require('./db_config');
 require('./jwt_utils');
 const {generateJwt} = require("./jwt_utils");
@@ -14,19 +13,18 @@ app.use(bodyParser.urlencoded({limit: '100mb', extended: true}));
 app.post('/api/customer/login', (req, res) => {
     const {username, password} = req.body;
     if (!username || !password) {
-        res.status(400).send("Bad Request");
-        return;
+        return res.status(400).send("Bad Request");
     }
     const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
     db.one(query)
         .then(user => {
             const token = generateJwt({id: user.id, username: user.username});
-            res.json({
+            return res.json({
                 token: token, message: "Login Successful", success: true, code: 200
             });
         })
-        .catch(err => {
-            res.status(200).json({message: 'Invalid username or password', success: false, code: 200});
+        .catch(_ => {
+            return res.status(200).json({message: 'Invalid username or password', success: false, code: 200});
         });
 });
 
@@ -44,14 +42,14 @@ app.post('/api/customer/register', (req, res) => {
     }
     let query = `SELECT * FROM users WHERE username = '${username}'`;
     db.one(query)
-        .then(user => {
-            res.status(200).json({message: 'Username already exists', success: false, code: 200});
-        }).catch(err => {
+        .then(_ => {
+            return res.status(200).json({message: 'Username already exists', success: false, code: 200});
+        }).catch(_ => {
         query = `INSERT INTO users (username, password, email) VALUES ('${username}', '${password}', '${email}')`;
         db.none(query)
             .then(() => {
                 return res.status(200).json({message: 'Registration Successful', success: true, code: 200});
-            }).catch(err => {
+            }).catch(_ => {
             return res.status(200).json({message: 'Registration Failed', success: false, code: 200});
         });
     })
@@ -62,18 +60,17 @@ app.post('/api/customer/register', (req, res) => {
 app.post('/api/owner/login', (req, res) => {
     const {username, password} = req.body;
     if (!username || !password) {
-        res.status(400).send("Bad Request");
-        return;
+        return res.status(400).send("Bad Request");
     }
     const query = `SELECT * FROM owner WHERE username = '${username}' AND password = '${password}'`;
     db.one(query)
         .then(user => {
             const token = generateJwt({id: user.id, username: user.username});
-            res.json({
+            return res.json({
                 token: token, message: "Login Successful", success: true, code: 200
             });
-        }).catch(err => {
-        res.status(200).json({message: 'Invalid username or password', success: false, code: 200});
+        }).catch(_ => {
+        return res.status(200).json({message: 'Invalid username or password', success: false, code: 200});
     });
 });
 
@@ -83,7 +80,7 @@ app.get('/api/products', (req, res) => {
     let query = `SELECT name, description, category_id, processor, ram, battery, dimensions, product_id, price FROM product LEFT JOIN store_product sp ON product.id = sp.product_id`;
     if (category_id) {
         query += ` WHERE category_id = ${category_id} ORDER BY price`;
-    }else {
+    } else {
         query += ` ORDER BY price`;
     }
     db.any(query)
@@ -96,9 +93,40 @@ app.get('/api/products', (req, res) => {
                     filteredProducts.push({...product, min_price: product.price, max_price: product.price});
                 }
             });
-            res.json({products: filteredProducts, success: true, code: 200});
-        }).catch(err => {
-        res.status(200).json({message: 'Failed to get products', success: false, code: 200});
+            return res.json({products: filteredProducts, success: true, code: 200});
+        }).catch(_ => {
+        return res.status(200).json({message: 'Failed to get products', success: false, code: 200});
+    });
+});
+
+// Get product details Endpoint
+app.get('/api/product/:id', (req, res) => {
+    const product_id = req.params.id;
+    if (!product_id) {
+        return res.status(400).send("Bad Request");
+    }
+    const query = `SELECT product.name,
+                           product.description,
+                           product.category_id,
+                           product.processor,
+                           product.ram,
+                           product.battery,
+                           product.dimensions,
+                           sp.price       as price,
+                           sp.link        as product_link,
+                           s.name         as store_name,
+                           s.link         as store_link,
+                           s.phone_number as store_number,
+                           s.address      as store_address
+                    FROM product
+                    LEFT JOIN store_product sp ON product.id = sp.product_id
+                    LEFT JOIN store s on s.id = sp.store_id
+                    WHERE product_id = ${product_id}`;
+    db.many(query)
+        .then(product => {
+            return res.json({product: product, success: true, code: 200});
+        }).catch(_ => {
+        return res.status(200).json({message: 'Failed to get product', success: false, code: 200});
     });
 });
 
@@ -121,9 +149,9 @@ app.get('/api/categories', (req, res) => {
                     }
                 }
             })
-            res.json({categories: categories_list, success: true, code: 200});
-        }).catch(err => {
-        res.status(200).json({message: 'Failed to get categories', success: false, code: 200});
+            return res.json({categories: categories_list, success: true, code: 200});
+        }).catch(_ => {
+        return res.status(200).json({message: 'Failed to get categories', success: false, code: 200});
     });
 });
 
