@@ -45,19 +45,16 @@ app.post('/api/customer/register', (req, res) => {
     let query = `SELECT * FROM users WHERE username = '${username}'`;
     db.one(query)
         .then(user => {
-                res.status(200).json({message: 'Username already exists', success: false, code: 200});
-            }
-        ).catch(err => {
-            query = `INSERT INTO users (username, password, email) VALUES ('${username}', '${password}', '${email}')`;
-            db.none(query)
-                .then(() => {
-                    return res.status(200).json({message: 'Registration Successful', success: true, code: 200});
-                }).catch(err => {
-                    return res.status(200).json({message: 'Registration Failed', success: false, code: 200});
-                }
-            );
-        }
-    )
+            res.status(200).json({message: 'Username already exists', success: false, code: 200});
+        }).catch(err => {
+        query = `INSERT INTO users (username, password, email) VALUES ('${username}', '${password}', '${email}')`;
+        db.none(query)
+            .then(() => {
+                return res.status(200).json({message: 'Registration Successful', success: true, code: 200});
+            }).catch(err => {
+            return res.status(200).json({message: 'Registration Failed', success: false, code: 200});
+        });
+    })
 
 });
 
@@ -76,9 +73,27 @@ app.post('/api/owner/login', (req, res) => {
                 token: token, message: "Login Successful", success: true, code: 200
             });
         }).catch(err => {
-            res.status(200).json({message: 'Invalid username or password', success: false, code: 200});
-        }
-    );
+        res.status(200).json({message: 'Invalid username or password', success: false, code: 200});
+    });
+});
+
+// Get Products Endpoint
+app.get('/api/products', (req, res) => {
+    const query = `SELECT name, description, category_id, processor, ram, battery, dimensions, product_id, price FROM product LEFT JOIN store_product sp ON product.id = sp.product_id ORDER BY price`;
+    db.any(query)
+        .then(products => {
+            let filteredProducts = [];
+            products.forEach(product => {
+                if (filteredProducts.find(p => p.product_id === product.product_id)) {
+                    filteredProducts[filteredProducts.findIndex(p => p.product_id === product.product_id)].max_price = product.price;
+                } else {
+                    filteredProducts.push({...product, min_price: product.price, max_price: product.price});
+                }
+            });
+            res.json({products: filteredProducts, success: true, code: 200});
+        }).catch(err => {
+        res.status(200).json({message: 'Failed to get products', success: false, code: 200});
+    });
 });
 
 // Get Categories & Subcategories Endpoint
@@ -102,9 +117,8 @@ app.get('/api/categories', (req, res) => {
             })
             res.json({categories: categories_list, success: true, code: 200});
         }).catch(err => {
-            res.status(200).json({message: 'Failed to get categories', success: false, code: 200});
-        }
-    );
+        res.status(200).json({message: 'Failed to get categories', success: false, code: 200});
+    });
 });
 
 app.listen(8080);
