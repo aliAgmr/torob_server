@@ -319,6 +319,40 @@ app.post('/api/store', (req, res) => {
         })
 });
 
+// Get Owner Stores + Products + Reports
+app.get('/api/owner/stores/:owner_id', (req, res) => {
+    const {owner_id} = req.params;
+    if (!owner_id) {
+        return res.status(400).json({message: 'لطفا همه فیلدها را به درستی وارد نمایید', success: false, code: 400});
+    }
+    const query = `SELECT store.id,
+                           store.name,
+                           store.link,
+                           store.phone_number,
+                           store.address,
+                           json_agg(DISTINCT jsonb_build_object(
+                                   'id', r.id, 'report_type', r.report_type, 'product_id', r.product_id
+                               )) AS reports,
+                           json_agg(DISTINCT jsonb_build_object(
+                                   'id', sp.id, 'price', sp.price, 'product_link', sp.link
+                               )) AS products
+                    FROM store
+                             LEFT JOIN report r on store.id = r.store_id
+                             LEFT JOIN store_product sp on store.id = sp.store_id
+                    WHERE store.owner_id = 1000
+                    GROUP BY store.id`;
+    db.any(query)
+        .then(stores => {
+            return res.json({
+                body: {
+                    stores: stores
+                }, success: true, code: 200
+            });
+        }).catch(_ => {
+        return res.status(200).json({message: 'مشکل در گرفتن لیست فروشگاه ها', success: false, code: 200})
+
+    });
+});
 
 app.listen(8080);
 console.log(`[\x1b[90m${new Date().toTimeString().split(' ')[0]}\x1b[0m] Server is listening on port 8080`);
