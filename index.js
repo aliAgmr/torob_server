@@ -131,6 +131,7 @@ app.get('/api/product/:id', (req, res) => {
                            product.dimensions,
                            sp.price       as price,
                            sp.link        as product_link,
+                           s.id           as store_id,
                            s.name         as store_name,
                            s.link         as store_link,
                            s.phone_number as store_number,
@@ -184,7 +185,12 @@ app.get('/api/categories', (req, res) => {
 app.post('/api/store/report', (req, res) => {
     const {store_id, report_type, customer_id, product_id} = req.body;
     if (!store_id || !report_type || !customer_id || !product_id) {
-        return res.status(400).json({message: 'لطفا همه فیلدها را به درستی وارد نمایید', success: false, code: 400});
+        return res.status(400).json({
+            store_id: store_id,
+            message: 'لطفا همه فیلدها را به درستی وارد نمایید',
+            success: false,
+            code: 400
+        });
     }
     const query = `INSERT INTO report (store_id, report_type, customer_id, product_id) VALUES (${store_id}, ${report_type}, ${customer_id}, ${product_id})`;
     db.none(query)
@@ -194,7 +200,7 @@ app.post('/api/store/report', (req, res) => {
             });
         }).catch(_ => {
         return res.status(200).json({
-            message: 'مشکلی در ثبت گزارش بوجود آمد.', success: false, code: 200
+            message: _.message, success: false, code: 200
         });
     });
 });
@@ -230,7 +236,11 @@ app.post('/api/product/favorite', (req, res) => {
         //     check if product is already in favorite list
         db.one(`SELECT * FROM customer_favorite_product WHERE product_id = ${product_id} AND customer_id = ${customer_id}`)
             .then(_ => {
-                return res.status(200).json({message: 'محصول در لیست موردعلاقه‌ها وجود دارد.', success: false, code: 200});
+                return res.status(200).json({
+                    message: 'محصول در لیست موردعلاقه‌ها وجود دارد.',
+                    success: false,
+                    code: 200
+                });
             }).catch(_ => {
             db.none(query)
                 .then(() => {
@@ -265,34 +275,20 @@ app.post('/api/product/favorite', (req, res) => {
 })
 
 // Get Customer Favorite Products
-app.get('/api/customer/favorite', (req, res) => {
-    const {customer_id} = req.body;
+app.get('/api/customer/favorite/:customer_id', (req, res) => {
+    const {customer_id} = req.params;
     if (!customer_id) {
         return res.status(400).json({message: 'لطفا همه فیلدها را به درستی وارد نمایید', success: false, code: 400});
     }
-    const query = `SELECT product.name,
-                           product.description,
-                           product.category_id,
-                           product.processor,
-                           product.ram,
-                           product.battery,
-                           product.dimensions,
-                           sp.price       as price,
-                           sp.link        as product_link,
-                           s.name         as store_name,
-                           s.link         as store_link,
-                           s.phone_number as store_number,
-                           s.address      as store_address
+    const query = `SELECT product.id
                     FROM product
                     LEFT JOIN customer_favorite_product f ON product.id = f.product_id
-                    LEFT JOIN store_product sp ON product.id = sp.product_id
-                    LEFT JOIN store s on s.id = sp.store_id
                     WHERE f.customer_id = ${customer_id}`;
-    db.many(query)
+    db.any(query)
         .then(products => {
             return res.json({
                 body: {
-                    products: products
+                    products: products.map(product => product.id)
                 }, success: true, code: 200
             });
         }).catch(_ => {
