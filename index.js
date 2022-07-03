@@ -90,7 +90,7 @@ app.get('/api/products', (req, res) => {
                        product_id,
                        price
                 FROM product
-                LEFT JOIN store_product sp ON product.id = sp.product_id`;
+                INNER JOIN store_product sp ON product.id = sp.product_id`;
     if (category_id) {
         query += ` WHERE category_id = ${category_id} ORDER BY price`;
     } else {
@@ -353,6 +353,59 @@ app.get('/api/owner/stores/:owner_id', (req, res) => {
 
     });
 });
+
+// Create New Product
+app.post('/api/product', (req, res) => {
+    const {name, description, category_id, processor, ram, battery, dimensions} = req.body;
+    if (!name || !description || !category_id || !processor || !ram || !battery || !dimensions) {
+        console.log(req.body);
+        return res.status(400).json({message: 'لطفا همه فیلدها را به درستی وارد نمایید', success: false, code: 400});
+    }
+    const query = `INSERT INTO product (name, description, category_id, processor, ram, battery, dimensions) VALUES ('${name}', '${description}', ${category_id}, '${processor}', '${ram}', '${battery}', '${dimensions}') RETURNING id`;
+    db.one(query)
+        .then(value => {
+            return res.status(200).json({
+                body: value, message: 'محصول با موفقیت افزوده شد.', success: true, code: 200
+            });
+        })
+        .catch(_ => {
+            return res.status(200).json({message: 'مشکل در ثبت محصول', success: false, code: 200});
+        })
+})
+
+// Add Product to Store
+app.post('/api/store/product', (req, res) => {
+    const {store_id, product_id, price, link} = req.body;
+    if (!store_id || !product_id || !price || !link) {
+        return res.status(400).json({message: 'لطفا همه فیلدها را به درستی وارد نمایید', success: false, code: 400});
+    }
+    const query = `INSERT INTO store_product (store_id, product_id, price, link) VALUES (${store_id}, ${product_id}, ${price}, '${link}')`;
+    db.none(query)
+        .then(() => {
+            return res.status(200).json({
+                body: null, message: 'محصول با موفقیت به فروشگاه اضافه شد.', success: true, code: 200
+            });
+        }).catch(_ => {
+        return res.status(200).json({message: 'مشکل در ثبت محصول به فروشگاه', success: false, code: 200});
+    })
+})
+
+// Create New Store
+app.post('/api/store', (req, res) => {
+    const {name, phone_number, address, link, owner_id} = req.body;
+    if (!name || !phone_number || !address || !link || !owner_id) {
+        return res.status(400).json({message: 'لطفا همه فیلدها را به درستی وارد نمایید', success: false, code: 400});
+    }
+    const query = `INSERT INTO store_product (name, phone_number, address, link, owner_id) VALUES ('${name}', '${phone_number}', '${address}', '${link}', ${owner_id})`;
+    db.none(query)
+        .then(() => {
+            return res.status(200).json({
+                body: null, message: 'فروشگاه با موفقیت افزوده شد.', success: true, code: 200
+            });
+        }).catch(_ => {
+        return res.status(200).json({message: 'مشکل در ثبت فروشگاه', success: false, code: 200});
+    })
+})
 
 app.listen(8080);
 console.log(`[\x1b[90m${new Date().toTimeString().split(' ')[0]}\x1b[0m] Server is listening on port 8080`);
