@@ -9,6 +9,14 @@ const {checkUsername, checkEmail, checkPassword} = require("./utils");
 app.use(bodyParser.json({limit: '100mb'}));
 app.use(bodyParser.urlencoded({limit: '100mb', extended: true}));
 
+// Serve Index Page in src
+app.use(express.static('src'));
+
+// Open Index Page in browser
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/src/index.html');
+});
+
 // Customer Login Endpoint
 app.post('/api/customer/login', (req, res) => {
     const {username, password} = req.body;
